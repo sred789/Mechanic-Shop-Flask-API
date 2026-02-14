@@ -1,25 +1,41 @@
-from flask import Flask
-from .extensions import db, ma
-from config import Config
+from flask import Flask, jsonify
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from app.models import Base, Customer, Mechanic, ServiceTicket
+from config import DATABASE_URL
+import flask.logging as logging
 
-def create_app():
-    app = Flask(__name__)
-    app.config.from_object(Config)
+app = Flask(__name__)
 
-    db.init_app(app)
-    ma.init_app(app)
+logging.basicConfig(level=logging.INFO)
+app.logger.setLevel(logging.DEBUG)
+app.logger.info("Starting Flask application with SQLAlchemy")
 
-    # IMPORT BLUEPRINTS
-    from .customers import customer_bp
-    from .mechanics import mechanic_bp
-    from .service_tickets import ticket_bp
+# Database Engine
+engine = create_engine(DATABASE_URL, echo=True)
 
-    # REGISTER BLUEPRINTS
-    app.register_blueprint(customer_bp, url_prefix="/customers")
-    app.register_blueprint(mechanic_bp, url_prefix="/mechanics")
-    app.register_blueprint(ticket_bp, url_prefix="/service-tickets")
+# Create tables
+Base.metadata.create_all(engine)
 
-    with app.app_context():
-        db.create_all()
+# Session Factory
+Session = sessionmaker(bind=engine)
 
-    return app
+@app.route("/")
+def home():
+    return {"message": "Flask + SQLAlchemy is running!"}
+
+# @app.route("/customers")
+# def get_customers():
+#     session = Session()
+#     customers = session.query(Customer).all()
+
+#     data = [
+#         {"id": c.id, "name": c.name, "email": c.email, "phone": c.phone}
+#         for c in customers
+#     ]
+
+#     session.close()
+#     return jsonify(data)
+
+# if __name__ == "__main__":
+#     app.run(debug=True)

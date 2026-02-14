@@ -1,53 +1,109 @@
-from flask import request
+from flask import request, jsonify
+from sqlalchemy.exc import IntegrityError
+
 from . import customer_bp
-from app.extensions import db
-from app.models import Customer
-from .schemas import customer_schema, customers_schema
+from ..extensions import db, cache, limiter
+from ..models import Customer, ServiceTicket
+from .schemas import customer_schema, customers_schema, login_schema
+from ..utils.token import encode_token
+from ..utils.token_required import token_required
 
 
-# CREATE CUSTOMER
 @customer_bp.route("/", methods=["POST"])
 def create_customer():
-    customer = customer_schema.load(request.json)
+    data = request.get_json() or {}
+    customer = customer_schema.load(data)
+
+   
+    customer.set_password(data["password"])
+
     db.session.add(customer)
-    db.session.commit()
+    try:
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        return jsonify({"error": "Email already exists"}), 409
+
     return customer_schema.jsonify(customer), 201
 
 
-# GET ALL CUSTOMERS
 @customer_bp.route("/", methods=["GET"])
+@cache.cached(timeout=60)  
 def get_customers():
-    customers = Customer.query.all()
-    return customers_schema.jsonify(customers)
+    
+    page = int(request.args.get("page", 1))
+    per_page = int(request.args.get("per_page", 10))
+    q = Customer.query.order_by(Customer.id.asc()).paginate(page=page, per_page=per_page, error_out=False)
+
+    return jsonify({
+        "items": customers_schema.dump(q.items),
+        "page": q.page,
+        "per_page": q.per_page,
+        "total": q.total,
+        "pages": q.pages
+    })
 
 
-# GET ONE CUSTOMER
-@customer_bp.route("/<int:id>", methods=["GET"])
-def get_customer(id):
-    customer = Customer.query.get_or_404(id)
-    return customer_schema.jsonify(customer)
-
-
-# UPDATE CUSTOMER
 @customer_bp.route("/<int:id>", methods=["PUT"])
-def update_customer(id):
+@token_required
+def update_customer(customer_id, id):
+    if customer_id != id:
+        return jsonify({"error": "Forbidden"}), 403
+
     customer = Customer.query.get_or_404(id)
+    data = request.get_json() or {}
 
-    data = request.get_json(silent=True)
-    if not data:
-        return {"error": "No JSON body received"}, 400
+    # allow updating name/email/password
+    if "name" in data:
+        customer.name = data["name"]
+    if "email" in data:
+        customer.email = data["email"]
+    if "password" in data:
+        customer.set_password(data["password"])
 
-    for key, value in data.items():
-        setattr(customer, key, value)
+    try:
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        return jsonify({"error": "Email already exists"}), 409
 
-    db.session.commit()
-    return customer_schema.jsonify(customer)
+    return customer_schema.jsonify(customer), 200
 
 
-# DELETE CUSTOMER
 @customer_bp.route("/<int:id>", methods=["DELETE"])
-def delete_customer(id):
+@token_required
+def delete_customer(customer_id, id):
+    if customer_id != id:
+        return jsonify({"error": "Forbidden"}), 403
+
     customer = Customer.query.get_or_404(id)
     db.session.delete(customer)
     db.session.commit()
-    return {"message": "Customer deleted"}
+    return jsonify({"message": "Deleted"}), 200
+
+
+@customer_bp.route("/login", methods=["POST"])
+@limiter.limit("10 per minute") 
+def login():
+    creds = login_schema.load(request.get_json() or {})
+    customer = Customer.query.filter_by(email=creds["email"]).first()
+    if not customer or not customer.check_password(creds["password"]):
+        return jsonify({"error": "Invalid credentials"}), 401
+
+    token = encode_token(customer.id)
+    return jsonify({"token": token})
+
+
+@customer_bp.route("/my-tickets", methods=["GET"])
+@token_required
+def my_tickets(customer_id):
+    tickets = ServiceTicket.query.filter_by(customer_id=customer_id).all()
+    return jsonify([{
+        "id": t.id,
+        "description": t.description,
+        "vin": t.vin,
+        "status": t.status,
+        "customer_id": t.customer_id,
+        "mechanic_ids": [m.id for m in t.mechanics],
+        "part_ids": [p.id for p in t.parts],
+    } for t in tickets])

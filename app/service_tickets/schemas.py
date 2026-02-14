@@ -1,37 +1,23 @@
-from datetime import datetime
-
-from marshmallow import EXCLUDE, pre_load
-
-from app.extensions import ma
-from app.models import ServiceTicket
+from marshmallow import fields
+from ..extensions import ma
+from ..models import ServiceTicket
 
 
 class ServiceTicketSchema(ma.SQLAlchemyAutoSchema):
     class Meta:
         model = ServiceTicket
         load_instance = True
-        include_relationships = True
         include_fk = True
-        unknown = EXCLUDE
 
-    @pre_load
-    def normalize_input(self, data, **kwargs):
-        # Accept "description" as an alias for the model's service_desc field.
-        if "description" in data and "service_desc" not in data:
-            data["service_desc"] = data.pop("description")
+    mechanic_ids = fields.Method("get_mechanic_ids", dump_only=True)
+    part_ids = fields.Method("get_part_ids", dump_only=True)
 
-        # Allow common date formats for service_date (e.g., "02/04/2026").
-        service_date = data.get("service_date")
-        if isinstance(service_date, str) and "/" in service_date:
-            for fmt in ("%m/%d/%Y", "%m/%d/%y"):
-                try:
-                    data["service_date"] = datetime.strptime(service_date, fmt).date()
-                    break
-                except ValueError:
-                    continue
+    def get_mechanic_ids(self, obj):
+        return [m.id for m in obj.mechanics]
 
-        return data
+    def get_part_ids(self, obj):
+        return [p.id for p in obj.parts]
 
 
-ticket_schema = ServiceTicketSchema()
-tickets_schema = ServiceTicketSchema(many=True)
+service_ticket_schema = ServiceTicketSchema()
+service_tickets_schema = ServiceTicketSchema(many=True)

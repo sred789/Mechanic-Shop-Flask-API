@@ -1,11 +1,12 @@
 from flask import Flask, jsonify
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from app import create_app
 from app.models import Base, Customer, Mechanic, ServiceTicket
 from config import DATABASE_URL
 import flask.logging as logging
 
-app = Flask(__name__)
+app = create_app('ProductionConfig')
 
 logging.basicConfig(level=logging.INFO)
 app.logger.setLevel(logging.DEBUG)

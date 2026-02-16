@@ -8,5 +8,5 @@ class Config:
 class ProductionConfig:
     SQLALCHEMY_DATABASE_URI = os.environ.get('SQLALCHEMY_DATABASE_URI')
     CACHE_TYPE = "SimpleCache"
-    HOST = os.environ.get('HOST', 'localhost')
-    PORT = os.environ.get('PORT', 443)
+    HOST = "0.0.0.0"
+    PORT = "443"

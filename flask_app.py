@@ -8,9 +8,9 @@ import flask.logging as logging
 
 app = create_app('ProductionConfig')
 
-logging.basicConfig(level=logging.INFO)
-app.logger.setLevel(logging.DEBUG)
-app.logger.info("Starting Flask application with SQLAlchemy")
+# logging.basicConfig(level=logging.INFO)
+# app.logger.setLevel(logging.DEBUG)
+# app.logger.info("Starting Flask application with SQLAlchemy")
 
 # Database Engine
 engine = create_engine(DATABASE_URL, echo=True)

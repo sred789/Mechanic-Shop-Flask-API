@@ -8,6 +8,7 @@ Flask-Caching==2.1.0
 Flask-Limiter==3.5.0
 
 PyJWT==2.8.0
+Jose==3.0.1
 
 flask-swagger==0.2.14
 flask-swagger-ui==4.11.1

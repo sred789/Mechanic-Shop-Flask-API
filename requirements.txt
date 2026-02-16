@@ -1,17 +1,17 @@
-Flask==3.0.2
-Flask-SQLAlchemy==3.1.1
-Flask-Marshmallow==1.2.1
-marshmallow==3.21.1
-marshmallow-sqlalchemy==0.29.0
+Flask
+Flask-SQLAlchemy
+Flask-Marshmallow
+marshmallow
+marshmallow-sqlalchemy
 
-Flask-Caching==2.1.0
-Flask-Limiter==3.5.0
+Flask-Caching
+Flask-Limiter
 
-PyJWT==2.8.0
-Jose==1.0.0
+PyJWT
+Jose
 
-flask-swagger==0.2.14
-flask-swagger-ui==4.11.1
+flask-swagger
+flask-swagger-ui
 
-python-dotenv==1.0.1
-Werkzeug==3.0.1
+python-dotenv
+Werkzeug

@@ -38,6 +38,7 @@ jobs:
         run: python -m unittest discover -s tests -p 'test_*.py'
 
   deploy:
+    needs: build
     runs-on: ubuntu-latest
 
     steps:
@@ -64,3 +65,4 @@ jobs:
         with:
           service-id: ${{ secrets.SERVICE_ID }}
           api-key: ${{ secrets.RENDER_API_KEY }}
+          wait-for-deployment: true
